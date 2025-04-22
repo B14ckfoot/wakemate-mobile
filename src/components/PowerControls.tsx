@@ -1,15 +1,15 @@
 // src/components/PowerControls.tsx
 import React from "react";
 import { View, TouchableOpacity, Text } from "react-native";
-import { Zap, Moon } from "lucide-react";
-import { wakeDevice } from "../services/deviceService";
-import { Device } from "../types";
+import { Zap, Moon } from "lucide-react-native";
+import deviceService from "../services/deviceService";
+import { Device } from "../../src/types/device";
 
 export default function PowerControls({ device }: { device: Device }) {
   return (
     <View style={{ flexDirection: "row", gap: 24 }}>
       <TouchableOpacity
-        onPress={() => wakeDevice(device)}
+        onPress={() => deviceService.wakeMachine(device.id, device.mac)}
         style={{ alignItems: "center" }}
       >
         <Zap size={32} />

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
-import { Device } from '../app/types/device';
+import { Device } from '../../src/types/device';
 import { Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
@@ -51,7 +51,8 @@ const SwipeableDeviceItem: React.FC<SwipeableDeviceItemProps> = ({
 
   const handlePress = () => {
     // Only navigate if the card isn't swiped open
-    if (translateX._value === 0) {
+    const currentValue = translateX.__getValue();
+    if (currentValue === 0) {
       router.push(`/devices/${device.id}`);
     } else {
       // Reset swipe position if swiped open and tapped

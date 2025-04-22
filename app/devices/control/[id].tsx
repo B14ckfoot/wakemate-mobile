@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { ArrowLeft, MousePointer, Keyboard as KeyboardIcon, Music, Power } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Device } from '../../types/device';
+import { Device } from '../../src/types/device';
 import deviceService from '../../services/deviceService';
 import MouseKeyboardScreen from '../../../src/components/MouseKeyboardScreen';
 

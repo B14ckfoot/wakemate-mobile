@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { Plus, Settings } from 'lucide-react-native';
 import { Link, useRouter } from 'expo-router';
-import { Device } from '../types/device';
+import { Device } from '../../src/types/device';
 import deviceService from '../services/deviceService';
 import SwipeableDeviceItem from '../../src/components/SwipeableDeviceItem';
 

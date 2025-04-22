@@ -23,7 +23,7 @@ import {
   Info,
   Save
 } from 'lucide-react-native';
-import { Device } from '../app/types/device';
+import { Device } from '../../src/types/device';
 import deviceService from '../services/deviceService';
 import { useServer } from '../context/ServerContext';
 

@@ -37,56 +37,20 @@ const MouseKeyboardScreen: React.FC = () => {
   const mediaHeight = useRef(new Animated.Value(0)).current;
   
   // Configure pan responder for touchpad
-  const panResponder = useRef(
-    PanGestureHandler.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        pan.setOffset({
-          x: pan.x._value,
-          y: pan.y._value
-        });
-        pan.setValue({ x: 0, y: 0 });
-      },
-      onPanResponderMove: (e, gestureState) => {
-        // If two fingers are used, handle as scroll
-        if (e.nativeEvent.touches && e.nativeEvent.touches.length > 1) {
-          setIsScrolling(true);
-          // We don't animate the pan in scroll mode
-        } else {
-          // Single finger is mouse movement
-          setIsScrolling(false);
-          Animated.event(
-            [null, { dx: pan.x, dy: pan.y }],
-            { useNativeDriver: false }
-          )(e, gestureState);
-        }
-      },
-      onPanResponderRelease: (e, gestureState) => {
-        pan.flattenOffset();
-        
-        if (isScrolling) {
-          // Send scroll command
-          console.log('Scroll', gestureState.dy);
-        } else if (Math.abs(gestureState.dx) < 5 && Math.abs(gestureState.dy) < 5) {
-          // It's a tap (minimal movement) - send left click
-          console.log('Left click');
-        } else {
-          // It's a drag - send mouse movement
-          console.log('Mouse move', gestureState.dx, gestureState.dy);
-        }
-        
-        // Reset pan position
-        Animated.spring(pan, {
-          toValue: { x: 0, y: 0 },
-          useNativeDriver: false
-        }).start();
-        
-        setIsScrolling(false);
-      }
-    })
-  ).current;
-  
+  const panX = useRef(new Animated.Value(0)).current;
+  const panY = useRef(new Animated.Value(0)).current;
+
+  const onGestureEvent = Animated.event(
+  [{ nativeEvent: { translationX: panX, translationY: panY } }],
+  { useNativeDriver: true }
+);
+
+  const onHandlerStateChange = (event) => {
+  if (event.nativeEvent.oldState === State.ACTIVE) {
+    // Handle state change
+    // ...
+  }
+};
   // Toggle panels
   const toggleKeyboard = () => {
     if (activePanel !== 'keyboard') {

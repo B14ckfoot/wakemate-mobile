@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Monitor, Power, Settings, Edit, Trash2 } from 'lucide-react-native';
-import { Device } from '../types/device';
+import { Device } from '../../src/types/device';
 import deviceService from '../services/deviceService';
 
 export default function DeviceDetailScreen() {
