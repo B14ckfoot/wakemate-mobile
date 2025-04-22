@@ -1,19 +1,23 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, I18nManager } from 'react-native';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { Device } from '../app/types/device';
-import { Wifi, Trash2 } from 'lucide-react-native';
+import { Trash2 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 interface SwipeableDeviceItemProps {
   device: Device;
   onDelete: (id: string) => void;
+  onLongPress?: (device: Device) => void;
 }
 
-const SwipeableDeviceItem: React.FC<SwipeableDeviceItemProps> = ({ device, onDelete }) => {
+const SwipeableDeviceItem: React.FC<SwipeableDeviceItemProps> = ({ 
+  device, 
+  onDelete,
+  onLongPress 
+}) => {
   const router = useRouter();
   const translateX = useRef(new Animated.Value(0)).current;
-  const rowRef = useRef<View>(null);
 
   const gestureHandler = Animated.event(
     [{ nativeEvent: { translationX: translateX } }],
@@ -58,8 +62,20 @@ const SwipeableDeviceItem: React.FC<SwipeableDeviceItemProps> = ({ device, onDel
     }
   };
 
+  const handleLongPress = () => {
+    if (onLongPress) {
+      // Reset swipe position first
+      Animated.spring(translateX, {
+        toValue: 0,
+        useNativeDriver: true
+      }).start(() => {
+        onLongPress(device);
+      });
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       {/* Underlying delete button */}
       <View style={styles.deleteButtonContainer}>
         <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
@@ -82,6 +98,8 @@ const SwipeableDeviceItem: React.FC<SwipeableDeviceItemProps> = ({ device, onDel
           <TouchableOpacity 
             style={styles.deviceItemContent} 
             onPress={handlePress}
+            onLongPress={handleLongPress}
+            delayLongPress={500}
             activeOpacity={0.8}
           >
             <View style={styles.deviceInfo}>
@@ -100,7 +118,7 @@ const SwipeableDeviceItem: React.FC<SwipeableDeviceItemProps> = ({ device, onDel
           </TouchableOpacity>
         </Animated.View>
       </PanGestureHandler>
-    </View>
+    </GestureHandlerRootView>
   );
 };
 

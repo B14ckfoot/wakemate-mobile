@@ -1,212 +1,253 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Alert } from 'react-native';
-import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
-import { Device } from '../app/types/device';
-import { Trash2 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { ArrowLeft, MousePointer, Keyboard as KeyboardIcon, Music, Power } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Device } from '../../types/device';
+import deviceService from '../../services/deviceService';
+import MouseKeyboardScreen from '../../../src/components/MouseKeyboardScreen';
 
-interface SwipeableDeviceItemProps {
-  device: Device;
-  onDelete: (id: string) => void;
-  onLongPress?: (device: Device) => void;
-}
-
-const SwipeableDeviceItem: React.FC<SwipeableDeviceItemProps> = ({ 
-  device, 
-  onDelete,
-  onLongPress 
-}) => {
+export default function DeviceControlScreen() {
+  const params = useLocalSearchParams();
+  const id = params.id as string;
   const router = useRouter();
-  const translateX = useRef(new Animated.Value(0)).current;
+  const [device, setDevice] = React.useState<Device | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [activeTab, setActiveTab] = React.useState<'mouse' | 'keyboard' | 'media' | 'power'>('mouse');
 
-  const gestureHandler = Animated.event(
-    [{ nativeEvent: { translationX: translateX } }],
-    { useNativeDriver: true }
-  );
+  React.useEffect(() => {
+    const fetchDevice = async () => {
+      try {
+        const devices = await deviceService.getDevices();
+        const foundDevice = devices.find(d => d.id === id);
+        if (foundDevice) {
+          setDevice(foundDevice);
+        } else {
+          alert('Device not found');
+          router.back();
+        }
+      } catch (error) {
+        console.error('Error loading device:', error);
+        alert('Failed to load device');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const onHandlerStateChange = ({ nativeEvent }: any) => {
-    if (nativeEvent.oldState === State.ACTIVE) {
-      // Check if swipe was enough to trigger delete button reveal
-      const dragX = nativeEvent.translationX;
-      const transX = dragX < -80 ? -80 : 0;
-      
-      Animated.spring(translateX, {
-        toValue: transX,
-        useNativeDriver: true,
-        bounciness: 0
-      }).start();
-    }
-  };
+    fetchDevice();
+  }, [id]);
 
-  const handleDelete = () => {
-    // Reset the card position before actually removing it
-    Animated.timing(translateX, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true
-    }).start(() => {
-      onDelete(device.id);
-    });
-  };
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#7c3aed" />
+        <Text style={styles.loadingText}>Loading device...</Text>
+      </View>
+    );
+  }
 
-  const handlePress = () => {
-    // Only navigate if the card isn't swiped open
-    if (translateX._value === 0) {
-      router.push(`/devices/${device.id}`);
-    } else {
-      // Reset swipe position if swiped open and tapped
-      Animated.spring(translateX, {
-        toValue: 0,
-        useNativeDriver: true
-      }).start();
-    }
-  };
-
-  const handleLongPress = () => {
-    if (onLongPress) {
-      // Reset swipe position first
-      Animated.spring(translateX, {
-        toValue: 0,
-        useNativeDriver: true
-      }).start(() => {
-        onLongPress(device);
-      });
-    } else {
-      // Default long press action - show context menu
-      Alert.alert(
-        device.name,
-        'Choose an option',
-        [
-          {
-            text: 'Edit Device',
-            onPress: () => router.push(`/devices/edit/${device.id}`)
-          },
-          {
-            text: 'Settings',
-            onPress: () => router.push('/settings')
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel'
-          }
-        ]
-      );
-    }
-  };
+  if (!device) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Device not found</Text>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      {/* Underlying delete button */}
-      <View style={styles.deleteButtonContainer}>
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-          <Trash2 size={20} color="#ffffff" />
-          <Text style={styles.deleteText}>Delete</Text>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <ArrowLeft size={24} color="#7c3aed" />
+        </TouchableOpacity>
+        <Text style={styles.title}>{device.name}</Text>
+      </View>
+
+      {/* Tab Selector */}
+      <View style={styles.tabs}>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'mouse' && styles.activeTab]}
+          onPress={() => setActiveTab('mouse')}
+        >
+          <MousePointer 
+            size={20} 
+            color={activeTab === 'mouse' ? '#7c3aed' : '#a0a0a0'} 
+          />
+          <Text style={[
+            styles.tabText, 
+            activeTab === 'mouse' && styles.activeTabText
+          ]}>
+            Mouse
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'keyboard' && styles.activeTab]}
+          onPress={() => setActiveTab('keyboard')}
+        >
+          <KeyboardIcon 
+            size={20} 
+            color={activeTab === 'keyboard' ? '#7c3aed' : '#a0a0a0'} 
+          />
+          <Text style={[
+            styles.tabText, 
+            activeTab === 'keyboard' && styles.activeTabText
+          ]}>
+            Keyboard
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'media' && styles.activeTab]}
+          onPress={() => setActiveTab('media')}
+        >
+          <Music 
+            size={20} 
+            color={activeTab === 'media' ? '#7c3aed' : '#a0a0a0'} 
+          />
+          <Text style={[
+            styles.tabText, 
+            activeTab === 'media' && styles.activeTabText
+          ]}>
+            Media
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'power' && styles.activeTab]}
+          onPress={() => setActiveTab('power')}
+        >
+          <Power 
+            size={20} 
+            color={activeTab === 'power' ? '#7c3aed' : '#a0a0a0'} 
+          />
+          <Text style={[
+            styles.tabText, 
+            activeTab === 'power' && styles.activeTabText
+          ]}>
+            Power
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Main card content */}
-      <PanGestureHandler
-        onGestureEvent={gestureHandler}
-        onHandlerStateChange={onHandlerStateChange}
-      >
-        <Animated.View 
-          style={[
-            styles.deviceItem,
-            { transform: [{ translateX }] }
-          ]}
-        >
-          <TouchableOpacity 
-            style={styles.deviceItemContent} 
-            onPress={handlePress}
-            onLongPress={handleLongPress}
-            delayLongPress={500}
-            activeOpacity={0.8}
-          >
-            <View style={styles.deviceInfo}>
-              <Text style={styles.deviceName}>{device.name}</Text>
-              <Text style={styles.deviceIp}>{device.ip}</Text>
-            </View>
-            <View style={styles.statusContainer}>
-              <View style={[
-                styles.statusIndicator, 
-                { backgroundColor: device.status === 'online' ? '#4ade80' : '#6b7280' }
-              ]} />
-              <Text style={styles.statusText}>
-                {device.status === 'online' ? 'Online' : 'Offline'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-      </PanGestureHandler>
-    </GestureHandlerRootView>
+      {/* Tab Content */}
+      <View style={styles.tabContent}>
+        {activeTab === 'mouse' || activeTab === 'keyboard' || activeTab === 'media' ? (
+          <MouseKeyboardScreen />
+        ) : (
+          <View style={styles.powerControls}>
+            <Text style={styles.sectionTitle}>Power Controls</Text>
+            <Text style={styles.infoText}>Power controls will be implemented in the next version.</Text>
+          </View>
+        )}
+      </View>
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 12,
-  },
-  deviceItem: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 12,
-    width: '100%',
-    zIndex: 1,
-  },
-  deviceItemContent: {
+    flex: 1,
+    backgroundColor: '#121212',
     padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#121212',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  deviceInfo: {
-    flex: 1,
-  },
-  deviceName: {
+  loadingText: {
     color: '#ffffff',
     fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
+    marginTop: 16,
   },
-  deviceIp: {
-    color: '#a0a0a0',
-    fontSize: 14,
+  errorContainer: {
+    flex: 1,
+    backgroundColor: '#121212',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
   },
-  statusContainer: {
+  errorText: {
+    color: '#ffffff',
+    fontSize: 20,
+    marginBottom: 16,
+  },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 20,
   },
-  statusIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 6,
-  },
-  statusText: {
-    color: '#a0a0a0',
-    fontSize: 14,
-  },
-  deleteButtonContainer: {
-    position: 'absolute',
-    right: 0,
-    height: '100%',
-    width: 80,
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
-    backgroundColor: '#ef4444',
+  backButton: {
+    marginRight: 16,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteButton: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
+  backButtonText: {
+    color: '#7c3aed',
+    fontSize: 16,
   },
-  deleteText: {
+  title: {
     color: '#ffffff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: '#1e1e1e',
+    borderRadius: 8,
+    marginBottom: 16,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 6,
+  },
+  activeTab: {
+    backgroundColor: '#2d2d2d',
+  },
+  tabText: {
+    color: '#a0a0a0',
+    marginLeft: 4,
     fontSize: 14,
-    marginTop: 4,
+  },
+  activeTabText: {
+    color: '#7c3aed',
+  },
+  tabContent: {
+    flex: 1,
+    backgroundColor: '#1e1e1e',
+    borderRadius: 12,
+  },
+  powerControls: {
+    padding: 16,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  infoText: {
+    color: '#a0a0a0',
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 40,
   },
 });
-
-export default SwipeableDeviceItem;

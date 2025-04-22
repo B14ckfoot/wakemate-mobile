@@ -4,7 +4,7 @@ import { Plus, Settings } from 'lucide-react-native';
 import { Link, useRouter } from 'expo-router';
 import { Device } from '../types/device';
 import deviceService from '../services/deviceService';
-import SwipeableDeviceItem from '../src/components/SwipeableDeviceItem';
+import SwipeableDeviceItem from '../../src/components/SwipeableDeviceItem';
 
 export default function DevicesScreen() {
   const router = useRouter();

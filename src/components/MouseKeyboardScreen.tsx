@@ -1,22 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  PanResponder,
   Animated,
   TextInput,
-  ScrollView,
-  Alert,
-  ActivityIndicator
+  ScrollView
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  ArrowLeft,
   MousePointer,
-  Keyboard as KeyboardIcon,
-  Music,
   Volume2,
   Volume,
   VolumeX,
@@ -25,55 +19,26 @@ import {
   Play,
   Pause
 } from 'lucide-react-native';
-import deviceService from '../services/deviceService';
-import { Device } from '../app/types/device';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 
-export default function MouseKeyboardScreen() {
+const MouseKeyboardScreen: React.FC = () => {
   const params = useLocalSearchParams();
   const id = params.id as string;
-  const router = useRouter();
-  
-  const [device, setDevice] = useState<Device | null>(null);
-  const [loading, setLoading] = useState(true);
   const [activePanel, setActivePanel] = useState<'mouse' | 'keyboard' | 'media'>('mouse');
   const [text, setText] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
   
   // Animated values for gesture tracking
-  const pan = useRef(new Animated.ValueXY()).current;
-  const scale = useRef(new Animated.Value(1)).current;
+  const pan = useRef(new Animated.Value(0)).current;
   
   // Animation for keyboard panel
   const keyboardHeight = useRef(new Animated.Value(0)).current;
   const mediaHeight = useRef(new Animated.Value(0)).current;
   
-  // Load device details
-  useEffect(() => {
-    const fetchDevice = async () => {
-      try {
-        const devices = await deviceService.getDevices();
-        const foundDevice = devices.find(d => d.id === id);
-        if (foundDevice) {
-          setDevice(foundDevice);
-        } else {
-          Alert.alert('Error', 'Device not found');
-          router.back();
-        }
-      } catch (error) {
-        console.error('Error loading device:', error);
-        Alert.alert('Error', 'Failed to load device');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchDevice();
-  }, [id]);
-  
   // Configure pan responder for touchpad
   const panResponder = useRef(
-    PanResponder.create({
+    PanGestureHandler.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
@@ -85,7 +50,7 @@ export default function MouseKeyboardScreen() {
       },
       onPanResponderMove: (e, gestureState) => {
         // If two fingers are used, handle as scroll
-        if (e.nativeEvent.touches.length > 1) {
+        if (e.nativeEvent.touches && e.nativeEvent.touches.length > 1) {
           setIsScrolling(true);
           // We don't animate the pan in scroll mode
         } else {
@@ -100,17 +65,15 @@ export default function MouseKeyboardScreen() {
       onPanResponderRelease: (e, gestureState) => {
         pan.flattenOffset();
         
-        if (device) {
-          if (isScrolling) {
-            // Send scroll command
-            sendScroll(gestureState.dy);
-          } else if (Math.abs(gestureState.dx) < 5 && Math.abs(gestureState.dy) < 5) {
-            // It's a tap (minimal movement) - send left click
-            sendMouseClick('left');
-          } else {
-            // It's a drag - send mouse movement
-            sendMouseMove(gestureState.dx, gestureState.dy);
-          }
+        if (isScrolling) {
+          // Send scroll command
+          console.log('Scroll', gestureState.dy);
+        } else if (Math.abs(gestureState.dx) < 5 && Math.abs(gestureState.dy) < 5) {
+          // It's a tap (minimal movement) - send left click
+          console.log('Left click');
+        } else {
+          // It's a drag - send mouse movement
+          console.log('Mouse move', gestureState.dx, gestureState.dy);
         }
         
         // Reset pan position
@@ -176,137 +139,59 @@ export default function MouseKeyboardScreen() {
   };
   
   // Send commands
-  const sendMouseMove = async (dx: number, dy: number) => {
-    if (!device) return;
-    
-    try {
-      await deviceService.sendMouseMove(device.id, device.ip, dx, dy);
-    } catch (error) {
-      console.error('Error sending mouse movement:', error);
-    }
+  const sendKeyboardInput = () => {
+    if (!text) return;
+    console.log('Sending keyboard input:', text);
+    setText('');
   };
   
-  const sendMouseClick = async (button: 'left' | 'right') => {
-    if (!device) return;
-    
-    try {
-      await deviceService.sendMouseClick(device.id, device.ip, button);
-    } catch (error) {
-      console.error(`Error sending ${button} click:`, error);
-    }
+  const sendSpecialKey = (key: string) => {
+    console.log('Sending special key:', key);
   };
   
-  const sendScroll = async (amount: number) => {
-    if (!device) return;
-    
-    try {
-      await deviceService.sendScroll(device.id, device.ip, amount);
-    } catch (error) {
-      console.error('Error sending scroll:', error);
+  const sendMediaCommand = (command: string) => {
+    console.log('Sending media command:', command);
+    if (command === 'play_pause') {
+      setIsPlaying(!isPlaying);
     }
   };
-  
-  const sendKeyboardInput = async () => {
-    if (!device || !text) return;
-    
-    try {
-      await deviceService.sendKeyboardInput(device.id, device.ip, text);
-      setText('');
-    } catch (error) {
-      console.error('Error sending keyboard input:', error);
-    }
-  };
-  
-  const sendSpecialKey = async (key: string) => {
-    if (!device) return;
-    
-    try {
-      await deviceService.sendSpecialKey(device.id, device.ip, key);
-    } catch (error) {
-      console.error(`Error sending special key ${key}:`, error);
-    }
-  };
-  
-  const sendMediaCommand = async (command: string) => {
-    if (!device) return;
-    
-    try {
-      switch (command) {
-        case 'play_pause':
-          await deviceService.sendMediaPlayPause(device.id, device.ip);
-          setIsPlaying(!isPlaying);
-          break;
-        case 'next':
-          await deviceService.sendMediaNext(device.id, device.ip);
-          break;
-        case 'previous':
-          await deviceService.sendMediaPrevious(device.id, device.ip);
-          break;
-        case 'volume_up':
-          await deviceService.sendVolumeUp(device.id, device.ip);
-          break;
-        case 'volume_down':
-          await deviceService.sendVolumeDown(device.id, device.ip);
-          break;
-        case 'mute':
-          await deviceService.sendVolumeMute(device.id, device.ip);
-          break;
-      }
-    } catch (error) {
-      console.error(`Error sending media command ${command}:`, error);
-    }
-  };
-  
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#7c3aed" />
-        <Text style={styles.loadingText}>Loading device...</Text>
-      </View>
-    );
-  }
   
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={24} color="#7c3aed" />
-        </TouchableOpacity>
-        <Text style={styles.title}>
-          {device?.name || 'Device Control'}
-        </Text>
-      </View>
-      
       {/* Touch Pad */}
-      <View 
-        style={styles.touchPadContainer}
-        {...panResponder.panHandlers}
-      >
-        <View style={styles.touchPad}>
-          {isScrolling ? (
-            <Text style={styles.scrollingText}>Scrolling...</Text>
-          ) : (
-            <>
-              <MousePointer size={32} color="#7c3aed" style={styles.pointerIcon} />
-              <Text style={styles.touchPadText}>
-                • Tap for left click
-                {'\n'}• Slide to move cursor
-                {'\n'}• Two fingers to scroll
-              </Text>
-            </>
-          )}
-        </View>
-      </View>
-      
+      <GestureHandlerRootView style={styles.touchPadContainer}>
+        <PanGestureHandler
+          onGestureEvent={(e) => {
+            // Handle pan gesture
+            console.log('Pan gesture:', e.nativeEvent);
+          }}
+          onHandlerStateChange={(e) => {
+            // Handle state change
+            console.log('State change:', e.nativeEvent);
+          }}
+        >
+          <Animated.View style={styles.touchPad}>
+            {isScrolling ? (
+              <Text style={styles.scrollingText}>Scrolling...</Text>
+            ) : (
+              <>
+                <MousePointer size={32} color="#7c3aed" style={styles.pointerIcon} />
+                <Text style={styles.touchPadText}>
+                  • Tap for left click
+                  {'\n'}• Slide to move cursor
+                  {'\n'}• Two fingers to scroll
+                </Text>
+              </>
+            )}
+          </Animated.View>
+        </PanGestureHandler>
+      </GestureHandlerRootView>
+
       {/* Mouse Buttons */}
       <View style={styles.mouseButtonsContainer}>
         <TouchableOpacity
           style={styles.mouseButton}
-          onPress={() => sendMouseClick('left')}
+          onPress={() => console.log('Left click')}
           activeOpacity={0.6}
         >
           <Text style={styles.mouseButtonText}>Left Click</Text>
@@ -314,7 +199,7 @@ export default function MouseKeyboardScreen() {
         
         <TouchableOpacity
           style={styles.mouseButton}
-          onPress={() => sendMouseClick('right')}
+          onPress={() => console.log('Right click')}
           activeOpacity={0.6}
         >
           <Text style={styles.mouseButtonText}>Right Click</Text>
@@ -330,10 +215,6 @@ export default function MouseKeyboardScreen() {
           ]}
           onPress={toggleKeyboard}
         >
-          <KeyboardIcon 
-            size={24} 
-            color={activePanel === 'keyboard' ? '#7c3aed' : '#a0a0a0'} 
-          />
           <Text style={[
             styles.panelToggleText,
             activePanel === 'keyboard' && styles.activeToggleText
@@ -347,10 +228,6 @@ export default function MouseKeyboardScreen() {
           ]}
           onPress={toggleMedia}
         >
-          <Music 
-            size={24} 
-            color={activePanel === 'media' ? '#7c3aed' : '#a0a0a0'} 
-          />
           <Text style={[
             styles.panelToggleText,
             activePanel === 'media' && styles.activeToggleText
@@ -460,48 +337,21 @@ export default function MouseKeyboardScreen() {
       </Animated.View>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
-    padding: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#121212',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#ffffff',
-    fontSize: 18,
-    marginTop: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    marginRight: 16,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },
-  title: {
-    color: '#ffffff',
-    fontSize: 24,
-    fontWeight: 'bold',
+    backgroundColor: '#1e1e1e',
   },
   touchPadContainer: {
     flex: 1,
     marginBottom: 16,
+    padding: 16,
   },
   touchPad: {
     flex: 1,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#262626',
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -524,6 +374,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
+    paddingHorizontal: 16,
   },
   mouseButton: {
     backgroundColor: '#2d2d2d',
@@ -540,6 +391,7 @@ const styles = StyleSheet.create({
   panelToggles: {
     flexDirection: 'row',
     marginBottom: 16,
+    paddingHorizontal: 16,
   },
   panelToggle: {
     flexDirection: 'row',
@@ -553,15 +405,15 @@ const styles = StyleSheet.create({
   },
   panelToggleText: {
     color: '#a0a0a0',
-    marginLeft: 8,
     fontSize: 16,
   },
   activeToggleText: {
     color: '#7c3aed',
   },
   keyboardPanel: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 16,
+    backgroundColor: '#262626',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     overflow: 'hidden',
   },
   inputContainer: {
@@ -571,7 +423,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    backgroundColor: '#2d2d2d',
+    backgroundColor: '#333333',
     borderRadius: 8,
     color: '#ffffff',
     paddingHorizontal: 12,
@@ -594,7 +446,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   specialKey: {
-    backgroundColor: '#2d2d2d',
+    backgroundColor: '#333333',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -604,8 +456,9 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   mediaPanel: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 16,
+    backgroundColor: '#262626',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     overflow: 'hidden',
   },
   mediaControls: {
@@ -618,7 +471,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#2d2d2d',
+    backgroundColor: '#333333',
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 16,
@@ -638,9 +491,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#2d2d2d',
+    backgroundColor: '#333333',
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 16,
   },
 });
+
+export default MouseKeyboardScreen;
