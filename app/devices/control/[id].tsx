@@ -34,6 +34,11 @@ export default function DeviceControlScreen() {
     router.push('/settings');
   };
   
+  // Handle back navigation
+  const handleBack = () => {
+    router.back();
+  };
+  
   // For touchpad handling
   const panX = useRef(new Animated.Value(0)).current;
   const panY = useRef(new Animated.Value(0)).current;
@@ -303,7 +308,7 @@ export default function DeviceControlScreen() {
     >
       {/* Header with device name and back button */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <ArrowLeft size={24} color="#7c3aed" />
         </TouchableOpacity>
         <Text style={styles.title}>{device.name}</Text>
@@ -425,9 +430,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30, // Increased padding for status bar
+    paddingBottom: 12,
     justifyContent: 'space-between',
+    backgroundColor: '#121212', // Match background to ensure opacity
+    zIndex: 10, // Ensure header is above other elements
   },
   backButton: {
     marginRight: 16,
