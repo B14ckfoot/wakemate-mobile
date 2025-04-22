@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
-import { Wifi, WifiOff, Plus } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { Plus, Settings } from 'lucide-react-native';
 import { Link, useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Device } from '../types/device';
 import deviceService from '../services/deviceService';
+import SwipeableDeviceItem from '../src/components/SwipeableDeviceItem';
 
 export default function DevicesScreen() {
   const router = useRouter();
@@ -27,29 +27,71 @@ export default function DevicesScreen() {
     }
   };
 
+  const handleDeleteDevice = (id: string) => {
+    Alert.alert(
+      'Delete Device',
+      'Are you sure you want to delete this device?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const updatedDevices = devices.filter(device => device.id !== id);
+              await deviceService.saveDevices(updatedDevices);
+              setDevices(updatedDevices);
+            } catch (error) {
+              console.error('Error deleting device:', error);
+              Alert.alert('Error', 'Failed to delete device');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleLongPress = (device: Device) => {
+    // Show options menu on long press
+    Alert.alert(
+      device.name,
+      'Choose an option',
+      [
+        {
+          text: 'Edit Device',
+          onPress: () => router.push(`/devices/edit/${device.id}`)
+        },
+        {
+          text: 'Settings',
+          onPress: () => router.push('/settings')
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        }
+      ]
+    );
+  };
+
   const renderDevice = ({ item }: { item: Device }) => (
-    <TouchableOpacity 
-      style={styles.deviceItem}
-      onPress={() => router.push(`/devices/${item.id}`)}
-    >
-      <View style={styles.deviceInfo}>
-        <Text style={styles.deviceName}>{item.name}</Text>
-        <Text style={styles.deviceIp}>{item.ip}</Text>
-      </View>
-      <View style={styles.statusContainer}>
-        <View style={[
-          styles.statusIndicator, 
-          { backgroundColor: item.status === 'online' ? '#4ade80' : '#6b7280' }
-        ]} />
-        <Text style={styles.statusText}>
-          {item.status === 'online' ? 'Online' : 'Offline'}
-        </Text>
-      </View>
-    </TouchableOpacity>
+    <SwipeableDeviceItem
+      device={item}
+      onDelete={handleDeleteDevice}
+    />
   );
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>My Devices</Text>
+        <TouchableOpacity 
+          style={styles.settingsButton}
+          onPress={() => router.push('/settings')}
+        >
+          <Settings size={24} color="#7c3aed" />
+        </TouchableOpacity>
+      </View>
+
       {isLoading ? (
         <ActivityIndicator size="large" color="#7c3aed" style={styles.loader} />
       ) : devices.length > 0 ? (
@@ -81,47 +123,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
     padding: 16,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  settingsButton: {
+    padding: 8,
+  },
   loader: {
     flex: 1,
   },
   deviceList: {
     paddingBottom: 80,
-  },
-  deviceItem: {
-    backgroundColor: '#1e1e1e',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  deviceInfo: {
-    flex: 1,
-  },
-  deviceName: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  deviceIp: {
-    color: '#a0a0a0',
-    fontSize: 14,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 6,
-  },
-  statusText: {
-    color: '#a0a0a0',
-    fontSize: 14,
   },
   emptyContainer: {
     flex: 1,
