@@ -9,7 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
-  Modal
+  Modal,
+  Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -223,6 +224,7 @@ export default function SettingsScreen() {
           <ArrowLeft size={24} color="#7c3aed" />
         </TouchableOpacity>
         <Text style={styles.title}>Settings</Text>
+        <View style={{width: 40}} /> {/* Empty view for balanced spacing */}
       </View>
       
       <ScrollView contentContainerStyle={styles.content}>
@@ -419,15 +421,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2d2d2d',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30, // Add padding for status bar
+    paddingBottom: 12,
+    backgroundColor: '#121212',
   },
   backButton: {
-    marginRight: 16,
     width: 40,
     height: 40,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     color: '#ffffff',

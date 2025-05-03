@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Plus, Settings } from 'lucide-react-native';
 import { Link, useRouter } from 'expo-router';
 import { Device } from '../../src/types/device';
@@ -77,6 +77,7 @@ export default function DevicesScreen() {
     <SwipeableDeviceItem
       device={item}
       onDelete={handleDeleteDevice}
+      onLongPress={handleLongPress}
     />
   );
 
@@ -92,21 +93,23 @@ export default function DevicesScreen() {
         </TouchableOpacity>
       </View>
 
-      {isLoading ? (
-        <ActivityIndicator size="large" color="#7c3aed" style={styles.loader} />
-      ) : devices.length > 0 ? (
-        <FlatList
-          data={devices}
-          renderItem={renderDevice}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.deviceList}
-        />
-      ) : (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No devices found</Text>
-          <Text style={styles.emptySubtext}>Add a device to get started</Text>
-        </View>
-      )}
+      <View style={styles.contentContainer}>
+        {isLoading ? (
+          <ActivityIndicator size="large" color="#7c3aed" style={styles.loader} />
+        ) : devices.length > 0 ? (
+          <FlatList
+            data={devices}
+            renderItem={renderDevice}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.deviceList}
+          />
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No devices found</Text>
+            <Text style={styles.emptySubtext}>Add a device to get started</Text>
+          </View>
+        )}
+      </View>
       
       <Link href="/devices/add" asChild>
         <TouchableOpacity style={styles.addButton}>
@@ -121,13 +124,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212',
-    padding: 16,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30, // Add padding for status bar
+    paddingBottom: 12,
+    backgroundColor: '#121212',
+  },
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
   title: {
     fontSize: 28,

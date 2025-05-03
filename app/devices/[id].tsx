@@ -5,7 +5,8 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Platform
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Monitor, Power, Settings, Edit, Trash2 } from 'lucide-react-native';
@@ -96,12 +97,16 @@ export default function DeviceDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => router.back()}
-      >
-        <ArrowLeft size={24} color="#7c3aed" />
-      </TouchableOpacity>
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <ArrowLeft size={24} color="#7c3aed" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{device.name}</Text>
+        <View style={{width: 40}} /> {/* Empty view for balanced spacing */}
+      </View>
       
       <View style={styles.deviceCard}>
         <View style={styles.iconContainer}>
@@ -188,11 +193,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
     padding: 16,
   },
-  backButton: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30, // Add padding for status bar
+    paddingBottom: 12,
+    justifyContent: 'space-between',
     marginBottom: 16,
+    marginLeft: -16,  // Compensate for container padding
+    marginRight: -16, // Compensate for container padding
+    width: '100%',
+  },
+  headerTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  backButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   deviceCard: {
     backgroundColor: '#1e1e1e',
